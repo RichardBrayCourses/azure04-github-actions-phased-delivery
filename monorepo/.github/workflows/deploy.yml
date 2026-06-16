@@ -1,0 +1,53 @@
+name: Deploy Static Website
+
+on:
+  push:
+    branches:
+      - testing
+      - staging
+      - production
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy ${{ github.ref_name }}
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy testing
+        if: github.ref_name == 'testing'
+        run: pnpm run deploy:testing
+
+      - name: Deploy staging
+        if: github.ref_name == 'staging'
+        run: pnpm run deploy:staging
+
+      - name: Deploy production
+        if: github.ref_name == 'production'
+        run: pnpm run deploy:production

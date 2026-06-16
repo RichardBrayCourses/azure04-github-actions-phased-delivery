@@ -26,6 +26,9 @@ if [[ -z "$WEBSITE_URL" || "$WEBSITE_URL" == "null" ]]; then
 fi
 
 echo ""
-echo "Website URL:"
+echo "Azure static website URL:"
 echo "$WEBSITE_URL"
+echo ""
+echo "Public environment URL:"
+echo "https://$AZURE_DOMAIN_NAME"
 echo ""

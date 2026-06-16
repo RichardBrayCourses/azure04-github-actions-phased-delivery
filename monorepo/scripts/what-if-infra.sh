@@ -13,7 +13,7 @@ az group create \
 az deployment group what-if \
   --resource-group "$AZURE_RESOURCE_GROUP" \
   --name "$AZURE_DEPLOYMENT_NAME" \
-  --template-file infra/main.bicep \
+  --template-file "$BICEP_TEMPLATE_FILE" \
   --parameters \
     location="$AZURE_LOCATION" \
     appName="$AZURE_APP_NAME"

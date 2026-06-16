@@ -29,7 +29,7 @@ else
 fi
 
 echo ""
-echo "Uploading $UI_DIST_DIR to the static website container in $STORAGE_ACCOUNT_NAME"
+echo "Uploading $UI_DIST_DIR to the $ENVIRONMENT_NAME static website container in $STORAGE_ACCOUNT_NAME"
 echo ""
 
 az storage blob upload-batch \
@@ -42,4 +42,5 @@ az storage blob upload-batch \
 
 echo ""
 echo "Upload complete."
+echo "Domain: https://$AZURE_DOMAIN_NAME"
 echo ""

@@ -1,0 +1,8 @@
+{
+  "environmentName": "testing",
+  "resourceGroup": "all-checks-out-testing-rg",
+  "location": "uksouth",
+  "appName": "allcheckouttest",
+  "deploymentName": "all-checks-out-testing",
+  "domainName": "testing.all-checks-out.com"
+}

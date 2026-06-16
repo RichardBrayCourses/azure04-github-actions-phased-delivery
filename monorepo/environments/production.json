@@ -1,0 +1,8 @@
+{
+  "environmentName": "production",
+  "resourceGroup": "all-checks-out-production-rg",
+  "location": "uksouth",
+  "appName": "allcheckoutprod",
+  "deploymentName": "all-checks-out-production",
+  "domainName": "all-checks-out.com"
+}

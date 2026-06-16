@@ -1,0 +1,8 @@
+{
+  "environmentName": "staging",
+  "resourceGroup": "all-checks-out-staging-rg",
+  "location": "uksouth",
+  "appName": "allcheckoutstage",
+  "deploymentName": "all-checks-out-staging",
+  "domainName": "staging.all-checks-out.com"
+}

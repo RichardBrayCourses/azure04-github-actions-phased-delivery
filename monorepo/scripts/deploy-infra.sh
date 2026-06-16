@@ -6,6 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/config.sh"
 
 echo ""
+echo "Deploying infrastructure for environment: $ENVIRONMENT_NAME"
 echo "Creating resource group: $AZURE_RESOURCE_GROUP"
 echo ""
 
@@ -21,7 +22,7 @@ echo ""
 az deployment group create \
   --resource-group "$AZURE_RESOURCE_GROUP" \
   --name "$AZURE_DEPLOYMENT_NAME" \
-  --template-file infra/main.bicep \
+  --template-file "$BICEP_TEMPLATE_FILE" \
   --parameters \
     location="$AZURE_LOCATION" \
     appName="$AZURE_APP_NAME" \
@@ -58,4 +59,6 @@ az storage blob service-properties update \
 
 echo ""
 echo "Infrastructure deployment complete."
+echo "Environment: $ENVIRONMENT_NAME"
+echo "Domain: https://$AZURE_DOMAIN_NAME"
 echo ""
