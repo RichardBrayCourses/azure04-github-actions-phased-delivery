@@ -620,6 +620,14 @@ It runs on pushes to:
 
 The workflow logs in to Azure, deploys infrastructure, builds the UI, uploads the UI, enables static website hosting, and prints the environment URL.
 
+The workflow sets:
+
+```yaml
+FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+```
+
+This opts GitHub's JavaScript actions into Node.js 24. It avoids the GitHub Actions warning about Node.js 20 actions being deprecated. This is separate from the Node.js version used to build the app.
+
 ## Reference: DNS And HTTPS
 
 Cloudflare remains the DNS provider.
