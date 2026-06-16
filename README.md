@@ -114,11 +114,11 @@ changes Azure testing only. It does not change staging, production, GitHub, or C
 | Initialise, repair, or publish course branches | Once per copied repo, or whenever one of the four local or remote branches is missing | `pnpm run repo:init` |
 | Configure GitHub Actions access to Azure | Once per GitHub repo, then again only if you need to replace the credential | `pnpm run setup:github-azure` |
 | Deploy testing for the first time | Once initially, then as needed | `pnpm run release:testing` or `pnpm run deploy:testing` |
-| Configure Cloudflare DNS for testing | Once, then only if the Azure host changes | Add `testing` CNAME |
+| Configure testing custom domain | Once, then only if the Azure host changes | Add `testing` CNAME, then run `pnpm run testing:connect-domain` |
 | Promote tested work into staging | Many times | `pnpm run release:staging` |
-| Configure Cloudflare DNS for staging | Once, then only if the Azure host changes | Add `staging` CNAME |
+| Configure staging custom domain | Once, then only if the Azure host changes | Add `staging` CNAME, then run `pnpm run staging:connect-domain` |
 | Promote approved work into production | Many times, carefully | `pnpm run release:production` |
-| Configure Cloudflare DNS for production | Once, then only if the Azure host changes | Add apex CNAME / CNAME flattening |
+| Configure production custom domain | Once, then only if the Azure host changes | Add apex CNAME / CNAME flattening, then run `pnpm run production:connect-domain` |
 | Preview Azure infrastructure changes | Whenever useful | `pnpm run whatif:testing` |
 | Remove an Azure environment | Rarely | `pnpm run destroy:testing` |
 
@@ -253,9 +253,11 @@ Testing URL:
 https://testing.all-checks-out.com
 ```
 
-## Step 5: Connect Testing DNS In Cloudflare
+## Step 5: Connect Testing Domain
 
-After testing deploys, ask Azure for the exact Cloudflare target:
+### Step 5a: Get The Testing Cloudflare Target
+
+Run:
 
 ```bash
 pnpm run testing:get-storage-account
@@ -267,12 +269,62 @@ It prints one value, for example:
 allcheckouttest2lwwkfpxl.z33.web.core.windows.net
 ```
 
-Create or update this Cloudflare record, using the exact value printed by the command as the target:
+That printed value is the Cloudflare `Target`.
+
+### Step 5b: Create The Testing DNS Record In Cloudflare
+
+Create or update this Cloudflare DNS record:
 
 ```text
 Type: CNAME
 Name: testing
 Target: allcheckouttest2lwwkfpxl.z33.web.core.windows.net
+Proxy status: DNS only
+```
+
+Use the exact value printed by `pnpm run testing:get-storage-account` as the target.
+
+Keep it as **DNS only** for now. Azure must be able to see the real CNAME before Cloudflare starts proxying it.
+
+### Step 5c: Wait Until Public DNS Shows The CNAME
+
+Run:
+
+```bash
+dig +short CNAME testing.all-checks-out.com
+```
+
+Wait until it prints the same target value:
+
+```text
+allcheckouttest2lwwkfpxl.z33.web.core.windows.net.
+```
+
+If it prints nothing, or prints Cloudflare IP addresses when you run `dig +short testing.all-checks-out.com`, the record is still proxied or DNS has not settled yet.
+
+### Step 5d: Connect The Testing Domain In Azure
+
+Run:
+
+```bash
+pnpm run testing:connect-domain
+```
+
+This Azure step matters. Cloudflare routes `testing.all-checks-out.com` to Azure, but Azure Storage must also be configured to accept that custom host name.
+
+If you skip this, the browser can show:
+
+```text
+The request URI is invalid.
+HttpStatusCode: 400
+ErrorCode: InvalidUri
+```
+
+### Step 5e: Turn Cloudflare Proxying Back On
+
+After `pnpm run testing:connect-domain` succeeds, edit the same Cloudflare DNS record:
+
+```text
 Proxy status: Proxied
 ```
 
@@ -282,7 +334,9 @@ Recommended Cloudflare settings:
 - Always Use HTTPS: enabled
 - Automatic HTTPS Rewrites: enabled
 
-After DNS is ready, test:
+### Step 5f: Test The Testing URL
+
+Open:
 
 ```text
 https://testing.all-checks-out.com
@@ -318,24 +372,58 @@ pnpm run deploy:staging
 
 Use this only when you deliberately want your terminal to deploy Azure staging directly.
 
-## Step 7: Connect Staging DNS In Cloudflare
+## Step 7: Connect Staging Domain
 
-After staging deploys, ask Azure for the exact Cloudflare target:
+### Step 7a: Get The Staging Cloudflare Target
+
+Run:
 
 ```bash
 pnpm run staging:get-storage-account
 ```
 
-Create or update this Cloudflare record, using the exact value printed by the command as the target:
+Copy the single value it prints. That printed value is the Cloudflare `Target`.
+
+### Step 7b: Create The Staging DNS Record In Cloudflare
+
+Create or update this Cloudflare DNS record:
 
 ```text
 Type: CNAME
 Name: staging
 Target: <the value printed by pnpm run staging:get-storage-account>
+Proxy status: DNS only
+```
+
+Keep it as **DNS only** for now.
+
+### Step 7c: Wait Until Public DNS Shows The CNAME
+
+Run:
+
+```bash
+dig +short CNAME staging.all-checks-out.com
+```
+
+Wait until it prints the same target value you copied in Step 7a.
+
+### Step 7d: Connect The Staging Domain In Azure
+
+Run:
+
+```bash
+pnpm run staging:connect-domain
+```
+
+### Step 7e: Turn Cloudflare Proxying Back On
+
+After `pnpm run staging:connect-domain` succeeds, edit the same Cloudflare DNS record:
+
+```text
 Proxy status: Proxied
 ```
 
-Then test:
+### Step 7f: Test The Staging URL
 
 ```text
 https://staging.all-checks-out.com
@@ -371,26 +459,60 @@ pnpm run deploy:production
 
 Use this only when you deliberately want your terminal to deploy Azure production directly.
 
-## Step 9: Connect Production DNS In Cloudflare
+## Step 9: Connect Production Domain
 
-After production deploys, ask Azure for the exact Cloudflare target:
+### Step 9a: Get The Production Cloudflare Target
+
+Run:
 
 ```bash
 pnpm run production:get-storage-account
 ```
 
-Create or update this Cloudflare record, using the exact value printed by the command as the target:
+Copy the single value it prints. That printed value is the Cloudflare `Target`.
+
+### Step 9b: Create The Production DNS Record In Cloudflare
+
+Create or update this Cloudflare DNS record:
 
 ```text
 Type: CNAME
 Name: @
 Target: <the value printed by pnpm run production:get-storage-account>
-Proxy status: Proxied
+Proxy status: DNS only
 ```
+
+Keep it as **DNS only** for now.
 
 Cloudflare may show this as CNAME flattening for the apex domain.
 
-Then test:
+### Step 9c: Wait Until Public DNS Shows The CNAME
+
+Run:
+
+```bash
+dig +short CNAME all-checks-out.com
+```
+
+Wait until it prints the same target value you copied in Step 9a.
+
+### Step 9d: Connect The Production Domain In Azure
+
+Run:
+
+```bash
+pnpm run production:connect-domain
+```
+
+### Step 9e: Turn Cloudflare Proxying Back On
+
+After `pnpm run production:connect-domain` succeeds, edit the same Cloudflare DNS record:
+
+```text
+Proxy status: Proxied
+```
+
+### Step 9f: Test The Production URL
 
 ```text
 https://all-checks-out.com
