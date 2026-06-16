@@ -1,16 +1,18 @@
 # Azure 04 - GitHub Actions Phased Delivery
 
-## Overview
+## The Simple Idea
 
-This lesson turns the static website deployment into a simple phased delivery system.
+This repository deploys the same static website into three separate Azure environments:
 
-The repository supports three deployed environments:
+| Environment | Branch | Azure resource group | Public URL |
+| --- | --- | --- | --- |
+| Testing | `testing` | `all-checks-out-testing-rg` | `https://testing.all-checks-out.com` |
+| Staging | `staging` | `all-checks-out-staging-rg` | `https://staging.all-checks-out.com` |
+| Production | `production` | `all-checks-out-production-rg` | `https://all-checks-out.com` |
 
-- Testing
-- Staging
-- Production
+Development happens on `main`, but `main` does not deploy automatically.
 
-Development happens on `main`, but `main` does not deploy automatically. Releases are promoted through permanent branches:
+Code is promoted in one direction:
 
 ```text
 main
@@ -25,33 +27,312 @@ staging
 production
 ```
 
-Each deployed environment has its own Azure resource group, storage account, static website endpoint, and Cloudflare DNS record.
+Each environment has its own Azure resource group, storage account, static website endpoint, configuration file, and Cloudflare DNS record.
+
+## The Three Command Families
+
+These commands look similar, but they do different jobs.
+
+| Command family | Example | Meaning |
+| --- | --- | --- |
+| `whatif:*` | `pnpm run whatif:testing` | Ask Azure what infrastructure would change. This is a preview. |
+| `deploy:*` | `pnpm run deploy:testing` | Deploy directly from your terminal to Azure. |
+| `release:*` | `pnpm run release:testing` | Promote a Git branch and let GitHub Actions deploy. |
+
+Normal course flow uses `release:*`.
+
+Manual troubleshooting or first Azure smoke tests can use `deploy:*`.
 
 ## What Changes Where?
 
 Read this before running commands.
 
-| Command | Your machine | Azure | GitHub |
-| --- | --- | --- | --- |
-| `pnpm install` | Installs project dependencies into `node_modules`. | No change. | No change. |
-| `pnpm run whatif:testing` | Runs an Azure CLI preview. | Reads Azure and may create the resource group if it is missing. It does not deploy the website. | No change. |
-| `pnpm run deploy:testing` | Builds the UI locally. | Creates or updates the testing resource group, storage account, static website hosting, and uploaded website files. | No change. |
-| `pnpm run release:testing` | Runs Git commands locally. | Not directly. Azure changes later when GitHub Actions deploys. | Pushes the `testing` branch, which triggers GitHub Actions. |
-| `pnpm run repo:init` | Creates a new local Git repository and branches. | No change. | Only changes GitHub if you pass a GitHub URL, because it then pushes branches. |
+| Command | Your machine | Azure | GitHub | Cloudflare |
+| --- | --- | --- | --- | --- |
+| `pnpm install` | Installs dependencies into `node_modules`. | No change. | No change. | No change. |
+| `pnpm run type-check` | Runs TypeScript checks. | No change. | No change. | No change. |
+| `pnpm run ui:build` | Builds `apps/ui/dist`. | No change. | No change. | No change. |
+| `pnpm run repo:init` | Creates local Git repo and branches. | No change. | No change unless a GitHub URL is passed. | No change. |
+| `pnpm run repo:init <github-url>` | Creates local Git repo and branches. | No change. | Adds `origin` and pushes branches. | No change. |
+| `pnpm run whatif:testing` | Runs Azure CLI. | Reads Azure and may create the testing resource group if missing. Does not upload the website. | No change. | No change. |
+| `pnpm run deploy:testing` | Builds the UI locally. | Creates or updates testing infrastructure and uploads the website. | No change. | No change. |
+| `pnpm run release:testing` | Runs Git commands locally. | Not directly. Azure changes later when GitHub Actions deploys. | Pushes `testing`, triggering GitHub Actions. | No change. |
+| `pnpm run release:staging` | Runs Git commands locally. | Not directly. Azure changes later when GitHub Actions deploys. | Pushes `staging`, triggering GitHub Actions. | No change. |
+| `pnpm run release:production` | Runs Git commands locally. | Not directly. Azure changes later when GitHub Actions deploys. | Pushes `production`, triggering GitHub Actions. | No change. |
+| `pnpm run destroy:testing` | Runs Azure CLI. | Deletes `all-checks-out-testing-rg`. | No change. | No change. |
+| Cloudflare DNS change | No local project change. | No change. | No change. | Creates or updates public domain routing. |
 
 The environment name matters:
 
-- `*:testing` affects only the testing environment.
-- `*:staging` affects only the staging environment.
-- `*:production` affects only the production environment.
+- `*:testing` affects only testing.
+- `*:staging` affects only staging.
+- `*:production` affects only production.
 
-For example, this command changes Azure testing:
+For example:
 
 ```bash
 pnpm run deploy:testing
 ```
 
-It does not change staging, production, or GitHub.
+changes Azure testing only. It does not change staging, production, GitHub, or Cloudflare.
+
+## What Happens Once And What Happens Many Times?
+
+| Journey event | How often? | Main command or action |
+| --- | --- | --- |
+| Install dependencies on your machine | Once per machine, then again when dependencies change | `pnpm install` |
+| Initialise branches in a newly copied course repo | Once per copied repo, only if `.git` does not exist | `pnpm run repo:init` |
+| Configure GitHub Actions Azure credentials | Once per GitHub repo | Add `AZURE_CREDENTIALS` in GitHub |
+| Deploy testing for the first time | Once initially, then as needed | `pnpm run release:testing` or `pnpm run deploy:testing` |
+| Configure Cloudflare DNS for testing | Once, then only if the Azure host changes | Add `testing` CNAME |
+| Promote tested work into staging | Many times | `pnpm run release:staging` |
+| Configure Cloudflare DNS for staging | Once, then only if the Azure host changes | Add `staging` CNAME |
+| Promote approved work into production | Many times, carefully | `pnpm run release:production` |
+| Configure Cloudflare DNS for production | Once, then only if the Azure host changes | Add apex CNAME / CNAME flattening |
+| Preview Azure infrastructure changes | Whenever useful | `pnpm run whatif:testing` |
+| Remove an Azure environment | Rarely | `pnpm run destroy:testing` |
+
+## Full Journey: From Fresh Clone To All Three Environments
+
+This is the main path through the lesson.
+
+## Step 1: Set Up The Repo On Your Machine
+
+Run this after cloning the repository:
+
+```bash
+pnpm install
+```
+
+This affects only your machine.
+
+Optional local checks:
+
+```bash
+pnpm run type-check
+pnpm run ui:build
+```
+
+These also affect only your machine.
+
+## Step 2: Only If This Is A Newly Copied Course Repo
+
+If the folder already has `.git`, skip this step.
+
+If this is a copied course folder with no `.git`, initialise Git:
+
+```bash
+pnpm run repo:init
+```
+
+If you already have the GitHub repository URL:
+
+```bash
+pnpm run repo:init <github-url>
+```
+
+This creates:
+
+```text
+main
+testing
+staging
+production
+```
+
+`repo:init` is a bootstrap command. Do not run it as part of normal deployment.
+
+## Step 3: Set Up GitHub Actions Once
+
+In GitHub, add a repository secret named:
+
+```text
+AZURE_CREDENTIALS
+```
+
+The value must be Azure service principal JSON compatible with `azure/login@v2`.
+
+Make sure these branches exist on GitHub:
+
+```text
+main
+testing
+staging
+production
+```
+
+After this, pushes to `testing`, `staging`, and `production` can deploy through GitHub Actions.
+
+## Step 4: Deploy Testing For The First Time
+
+Preferred course path:
+
+```bash
+pnpm run release:testing
+```
+
+This promotes:
+
+```text
+main -> testing
+```
+
+It pushes the `testing` branch to GitHub. GitHub Actions then deploys the testing Azure environment.
+
+Manual Azure path:
+
+```bash
+pnpm run deploy:testing
+```
+
+Use the manual path when GitHub Actions is not ready yet, or when you deliberately want your terminal to deploy Azure testing directly.
+
+Testing URL:
+
+```text
+https://testing.all-checks-out.com
+```
+
+## Step 5: Connect Testing DNS In Cloudflare
+
+After testing deploys, the script prints an Azure URL like:
+
+```text
+https://<storage-account>.z33.web.core.windows.net/
+```
+
+Create or update this Cloudflare record:
+
+```text
+Type: CNAME
+Name: testing
+Target: <storage-account>.z33.web.core.windows.net
+Proxy status: Proxied
+```
+
+Recommended Cloudflare settings:
+
+- SSL/TLS encryption mode: `Full`
+- Always Use HTTPS: enabled
+- Automatic HTTPS Rewrites: enabled
+
+After DNS is ready, test:
+
+```text
+https://testing.all-checks-out.com
+```
+
+## Step 6: Promote Testing To Staging
+
+After testing looks good:
+
+```bash
+pnpm run release:staging
+```
+
+This promotes:
+
+```text
+testing -> staging
+```
+
+It pushes the `staging` branch to GitHub. GitHub Actions then deploys the staging Azure environment.
+
+Staging URL:
+
+```text
+https://staging.all-checks-out.com
+```
+
+Manual staging deployment:
+
+```bash
+pnpm run deploy:staging
+```
+
+Use this only when you deliberately want your terminal to deploy Azure staging directly.
+
+## Step 7: Connect Staging DNS In Cloudflare
+
+After staging deploys, create or update:
+
+```text
+Type: CNAME
+Name: staging
+Target: the staging *.web.core.windows.net host
+Proxy status: Proxied
+```
+
+Then test:
+
+```text
+https://staging.all-checks-out.com
+```
+
+## Step 8: Promote Staging To Production
+
+After staging is approved:
+
+```bash
+pnpm run release:production
+```
+
+This promotes:
+
+```text
+staging -> production
+```
+
+It pushes the `production` branch to GitHub. GitHub Actions then deploys the production Azure environment.
+
+Production URL:
+
+```text
+https://all-checks-out.com
+```
+
+Manual production deployment:
+
+```bash
+pnpm run deploy:production
+```
+
+Use this only when you deliberately want your terminal to deploy Azure production directly.
+
+## Step 9: Connect Production DNS In Cloudflare
+
+After production deploys, create or update:
+
+```text
+Type: CNAME
+Name: @
+Target: the production *.web.core.windows.net host
+Proxy status: Proxied
+```
+
+Cloudflare may show this as CNAME flattening for the apex domain.
+
+Then test:
+
+```text
+https://all-checks-out.com
+```
+
+## Normal Day-To-Day Release Flow
+
+After first-time setup, the repeated flow is:
+
+```bash
+pnpm run release:testing
+pnpm run release:staging
+pnpm run release:production
+```
+
+Use them in order.
+
+Do not deploy directly from `main`.
+
+Do not deploy from feature branches.
 
 ## If You Just Ran deploy:testing
 
@@ -84,185 +365,49 @@ The command performed these actions:
 
 The public Cloudflare URL works only after the matching Cloudflare DNS record exists.
 
-## The Three Deployment Commands
+## Previewing Azure Changes
 
-There are three similar-looking commands, but they do different jobs.
-
-| Command | What it does | When to use it |
-| --- | --- | --- |
-| `pnpm run whatif:testing` | Previews the Azure infrastructure change for testing. It does not build or upload the website. | Use this before deploying when you want to see what Azure would change. |
-| `pnpm run deploy:testing` | Deploys testing directly from your local machine. It deploys infrastructure, builds the UI, uploads it, and prints the URLs. | Use this when you want to deploy manually from your terminal. |
-| `pnpm run release:testing` | Promotes `main` to the `testing` branch and pushes it. GitHub Actions then deploys testing. | Use this for the normal course release flow. |
-
-The same pattern exists for staging and production:
-
-```bash
-pnpm run whatif:staging
-pnpm run deploy:staging
-pnpm run release:staging
-
-pnpm run whatif:production
-pnpm run deploy:production
-pnpm run release:production
-```
-
-In normal day-to-day use, prefer the `release:*` commands. They exercise the branch model and GitHub Actions deployment path.
-
-## Do I Need To Run repo:init First?
-
-Run `repo:init` only when this course folder has been copied into a brand new folder that does not already have a `.git` directory.
-
-If this repository is already a Git repository, do not run it.
-
-Use:
-
-```bash
-pnpm run repo:init
-```
-
-or, if you already have the GitHub repository URL:
-
-```bash
-pnpm run repo:init <github-url>
-```
-
-That creates the four permanent branches:
-
-```text
-main
-testing
-staging
-production
-```
-
-## Deploying Into Testing From Scratch
-
-This is the first deployment story. Start here.
-
-There are two ways to deploy testing:
-
-- Normal course path: `release:testing` pushes a branch and lets GitHub Actions deploy.
-- Manual path: `deploy:testing` deploys directly from your terminal to Azure.
-
-Use the normal course path once GitHub Actions has been configured. Use the manual path when you are deliberately testing Azure deployment from your own machine.
-
-1. Install dependencies:
-
-```bash
-pnpm install
-```
-
-2. If this is a brand new copied course folder with no `.git` directory, initialise the repository:
-
-```bash
-pnpm run repo:init <github-url>
-```
-
-Skip this step if `.git` already exists.
-
-3. Configure GitHub Actions with the `AZURE_CREDENTIALS` secret.
-
-4. Make sure your current development work is committed on `main`.
-
-5. Optionally preview the Azure infrastructure change. This contacts Azure but does not build or upload the website:
+Use What-If when you want to preview infrastructure changes:
 
 ```bash
 pnpm run whatif:testing
-```
-
-6. Promote `main` to `testing`. This changes GitHub by pushing the `testing` branch:
-
-```bash
-pnpm run release:testing
-```
-
-7. GitHub Actions then changes Azure by deploying the testing branch to:
-
-```text
-https://testing.all-checks-out.com
-```
-
-Manual alternative:
-
-Use this command only if you want your terminal to change Azure directly instead of using GitHub Actions:
-
-```bash
-pnpm run deploy:testing
-```
-
-## Deploying Into Staging From Scratch
-
-Staging receives code only after testing has been deployed and checked.
-
-1. Confirm the testing environment is good:
-
-```text
-https://testing.all-checks-out.com
-```
-
-2. Optionally preview the staging infrastructure change. This contacts Azure but does not build or upload the website:
-
-```bash
 pnpm run whatif:staging
-```
-
-3. Promote `testing` to `staging`. This changes GitHub by pushing the `staging` branch:
-
-```bash
-pnpm run release:staging
-```
-
-4. GitHub Actions then changes Azure by deploying the staging branch to:
-
-```text
-https://staging.all-checks-out.com
-```
-
-Manual alternative:
-
-Use this command only if you want your terminal to change Azure staging directly:
-
-```bash
-pnpm run deploy:staging
-```
-
-## Deploying Into Production From Scratch
-
-Production receives code only after staging has been reviewed.
-
-1. Confirm the staging environment is approved:
-
-```text
-https://staging.all-checks-out.com
-```
-
-2. Optionally preview the production infrastructure change. This contacts Azure but does not build or upload the website:
-
-```bash
 pnpm run whatif:production
 ```
 
-3. Promote `staging` to `production`. This changes GitHub by pushing the `production` branch:
+What-If does not build or upload the website.
+
+The current script creates the resource group first if it is missing, because Azure group-level What-If needs a resource group to run against.
+
+## Removing Environments
+
+Destroy commands delete Azure resource groups. They do not change GitHub or Cloudflare.
+
+Testing:
 
 ```bash
-pnpm run release:production
+pnpm run destroy:testing
 ```
 
-4. GitHub Actions then changes Azure by deploying the production branch to:
+Staging:
+
+```bash
+pnpm run destroy:staging
+```
+
+Production:
+
+```bash
+pnpm run destroy:production
+```
+
+Production deletion requires this exact confirmation:
 
 ```text
-https://all-checks-out.com
+DELETE-PRODUCTION
 ```
 
-Manual alternative:
-
-Use this command only if you want your terminal to change Azure production directly:
-
-```bash
-pnpm run deploy:production
-```
-
-## Project Structure
+## Reference: Project Structure
 
 ```text
 .
@@ -284,7 +429,7 @@ pnpm run deploy:production
 └── pnpm-workspace.yaml
 ```
 
-## Prerequisites
+## Reference: Prerequisites
 
 You need:
 
@@ -295,12 +440,6 @@ You need:
 - a signed-in Azure CLI session for local deployments
 - a registered domain managed in Cloudflare
 - a GitHub repository with an `AZURE_CREDENTIALS` secret for GitHub Actions
-
-Install dependencies:
-
-```bash
-pnpm install
-```
 
 Check your Azure CLI account:
 
@@ -314,7 +453,7 @@ Sign in if needed:
 az login
 ```
 
-## Environment Configuration
+## Reference: Environment Configuration
 
 Environment settings live in:
 
@@ -324,67 +463,35 @@ environments/staging.json
 environments/production.json
 ```
 
-| Environment | Branch | Resource group | Public URL |
-| --- | --- | --- | --- |
-| Testing | `testing` | `all-checks-out-testing-rg` | `https://testing.all-checks-out.com` |
-| Staging | `staging` | `all-checks-out-staging-rg` | `https://staging.all-checks-out.com` |
-| Production | `production` | `all-checks-out-production-rg` | `https://all-checks-out.com` |
-
-## Local Deployment Reference
-
-Deploy testing:
+## Reference: Local Deployment Commands
 
 ```bash
 pnpm run deploy:testing
-```
-
-Deploy staging:
-
-```bash
 pnpm run deploy:staging
-```
-
-Deploy production:
-
-```bash
 pnpm run deploy:production
 ```
 
 Each deployment creates or updates the resource group, deploys Bicep, enables static website hosting, builds the UI, uploads the UI, and prints the deployed URLs.
 
-## What-If Reference
-
-Preview infrastructure changes:
-
-```bash
-pnpm run whatif:testing
-pnpm run whatif:staging
-pnpm run whatif:production
-```
-
-## Release Command Reference
-
-Promote `main` to `testing`:
+## Reference: Release Commands
 
 ```bash
 pnpm run release:testing
-```
-
-Promote `testing` to `staging`:
-
-```bash
 pnpm run release:staging
-```
-
-Promote `staging` to `production`:
-
-```bash
 pnpm run release:production
 ```
 
-The release scripts fast-forward the target branch and push it to GitHub. GitHub Actions deploys only from `testing`, `staging`, and `production`.
+The release scripts fast-forward the target branch and push it to GitHub.
 
-## GitHub Actions
+GitHub Actions deploys only from:
+
+- `testing`
+- `staging`
+- `production`
+
+It does not deploy from `main`.
+
+## Reference: GitHub Actions
 
 The workflow is defined in:
 
@@ -398,64 +505,11 @@ It runs on pushes to:
 - `staging`
 - `production`
 
-It does not run on `main`.
-
 The workflow logs in to Azure, deploys infrastructure, builds the UI, uploads the UI, enables static website hosting, and prints the environment URL.
 
-## Repository Bootstrap Reference
-
-When this course repository is copied into a new folder, initialise it with:
-
-```bash
-pnpm run repo:init
-```
-
-This fails if `.git` already exists. Otherwise it creates:
-
-```text
-main
-testing
-staging
-production
-```
-
-To add a GitHub remote and push all branches:
-
-```bash
-pnpm run repo:init <github-url>
-```
-
-## Destroy
-
-Destroy testing:
-
-```bash
-pnpm run destroy:testing
-```
-
-Destroy staging:
-
-```bash
-pnpm run destroy:staging
-```
-
-Destroy production:
-
-```bash
-pnpm run destroy:production
-```
-
-Production deletion requires this exact confirmation:
-
-```text
-DELETE-PRODUCTION
-```
-
-## DNS And HTTPS
+## Reference: DNS And HTTPS
 
 Cloudflare remains the DNS provider.
-
-After each environment is deployed, copy the printed Azure static website host and create a proxied Cloudflare DNS record:
 
 | Record | Type | Target | Proxy status |
 | --- | --- | --- | --- |
