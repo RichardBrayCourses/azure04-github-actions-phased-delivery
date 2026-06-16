@@ -5,37 +5,34 @@
 - **Azure02 - Baseline Repository**  
   Create a clean version of the application that deploys using Azure-generated URLs and contains no custom domain or DNS configuration.
 
-- **Azure03 - Custom Domains**  
-  Add support for www.all-checks-out.com, testing.all-checks-out.com, DNS configuration and managed SSL certificates.
+- **Azure03 - Registered Domain**  
+  Add support for www.all-checks-out.com through the registered domain, Cloudflare DNS and the Azure static website endpoint.
 
-- **Azure04 - Entra Authentication**  
+- **Azure04 - GitHub Actions Phased Delivery**  
+  Add automated GitHub Actions deployment, branch promotion and independent testing, staging and production environments using registered domains.
+
+- **Azure05 - Entra Authentication**  
   Add Microsoft Entra login, logout, token management and API authorization.
 
-- **Azure05 - Azure SQL**  
+- **Azure06 - Azure SQL**  
   Replace the existing persistence mechanism with Azure SQL, Entity Framework Core and modern ASP.NET Core data access patterns.
 
-- **Azure06 - Document Storage**  
+- **Azure07 - Document Storage**  
   Store uploaded documents in Azure Blob Storage and manage document metadata in Azure SQL.
 
-- **Azure07 - AI Verification**  
+- **Azure08 - AI Verification**  
   Analyse and verify uploaded documents using Azure AI services and implement verification workflows.
 
-- **Azure08 - GitHub Actions Deployment**  
-  Introduce automated build, test and deployment pipelines using GitHub Actions.
-
-- **Azure09 - Environment Separation**  
-  Create independent testing and production environments with separate resources, databases, storage and secrets.
-
-- **Azure10 - Domain Model Review**  
+- **Azure09 - Domain Model Review**  
   Review the completed application and identify bounded contexts and candidate service ownership boundaries.
 
-- **Azure11 - Microservices**  
-  Split the backend into independently deployable services based on the boundaries identified in Azure10.
+- **Azure10 - Microservices**  
+  Split the backend into independently deployable services based on the boundaries identified in Azure09.
 
-- **Azure12 - Microfrontends**  
+- **Azure11 - Microfrontends**  
   Split the frontend into independently deployable applications aligned with backend service ownership.
 
-- **Azure13 - Production Hardening**  
+- **Azure12 - Production Hardening**  
   Add monitoring, logging, alerting, backups, security reviews and operational procedures for long-term production operation.
 
 ## Current State
@@ -45,13 +42,14 @@
 - Single backend application
 - Azure deployment working
 - Public website currently running at www.all-checks-out.com
+- No GitHub Actions deployment pipeline
+- No testing environment
+- No staging environment
+- No production environment separation
 - No Entra authentication
 - No Azure SQL
 - No Blob Storage document management
 - No AI document verification
-- No GitHub Actions deployment pipeline
-- No testing environment
-- No production environment separation
 - No microservices
 - No microfrontends
 
@@ -76,29 +74,68 @@ Azure02 becomes the clean baseline project for the Azure course.
 
 ---
 
-# Azure03 - Custom Domain Repository
+# Azure03 - Registered Domain Repository
 
 ## Tasks
 
 - [ ] Create Azure03 repository from Azure02
 - [ ] Purchase or transfer all-checks-out.com domain
-- [ ] Configure Azure custom domain support
-- [ ] Configure Azure managed certificates
-- [ ] Configure DNS records
+- [ ] Configure Cloudflare DNS
 - [ ] Configure www.all-checks-out.com
-- [ ] Configure testing.all-checks-out.com
+- [ ] Point the registered domain to the Azure static website endpoint
 - [ ] Document complete migration process from Azure02
 - [ ] Document DNS changes
-- [ ] Document certificate configuration
-- [ ] Verify all URLs work correctly
+- [ ] Verify the registered domain URL works correctly
 
 ## Notes
 
-Azure03 contains everything required to move from Azure-generated URLs to production domains.
+Azure03 contains the first registered-domain deployment for www.all-checks-out.com.
 
 ---
 
-# Azure04 - Entra Authentication
+# Azure04 - GitHub Actions Phased Delivery
+
+## Repository
+
+https://github.com/RichardBrayCourses/azure04-github-actions-phased-delivery
+
+## Tasks
+
+- [ ] Create Azure04 repository from Azure03
+- [ ] Create testing, staging and production branch strategy
+- [ ] Create GitHub Actions deployment workflow
+- [ ] Configure GitHub Actions access to Azure
+- [ ] Create environment-specific configuration files
+- [ ] Create testing Azure environment
+- [ ] Create staging Azure environment
+- [ ] Create production Azure environment
+- [ ] Configure testing.all-checks-out.com
+- [ ] Configure staging.all-checks-out.com
+- [ ] Configure www.all-checks-out.com for production
+- [ ] Create local what-if, deploy, release and destroy commands
+- [ ] Promote main to testing
+- [ ] Promote testing to staging
+- [ ] Promote staging to production
+- [ ] Document rollback and recovery process
+
+## Decisions
+
+- Testing, staging and production use separate Azure resource groups
+- GitHub Actions deploys from environment branches only
+- Releases flow from main to testing, then staging, then production
+- Registered domains are configured for all three public environments
+
+## Notes
+
+Azure04 makes deployment repeatable before authentication and data features are added.
+
+---
+
+# Azure05 - Entra Authentication
+
+## Repository
+
+https://github.com/RichardBrayCourses/azure05-entra-authentication
 
 ## Tasks
 
@@ -112,6 +149,7 @@ Azure03 contains everything required to move from Azure-generated URLs to produc
 - [ ] Add authorization infrastructure
 - [ ] Create user database tables
 - [ ] Automatically provision users on first login
+- [ ] Configure identity settings for testing, staging and production
 
 ## Notes
 
@@ -119,7 +157,7 @@ All future functionality should assume authenticated users.
 
 ---
 
-# Azure05 - Azure SQL Migration
+# Azure06 - Azure SQL Migration
 
 ## Tasks
 
@@ -132,6 +170,7 @@ All future functionality should assume authenticated users.
 - [ ] Implement repository pattern where appropriate
 - [ ] Add integration tests
 - [ ] Add local SQL development environment
+- [ ] Configure database settings for testing, staging and production
 
 ## Notes
 
@@ -139,7 +178,7 @@ Use current ASP.NET Core best practices rather than older controller architectur
 
 ---
 
-# Azure06 - Document Storage
+# Azure07 - Document Storage
 
 ## Tasks
 
@@ -153,6 +192,7 @@ Use current ASP.NET Core best practices rather than older controller architectur
 - [ ] Move document storage from local filesystem to Blob Storage
 - [ ] Add security and authorization checks
 - [ ] Add document versioning strategy
+- [ ] Configure storage settings for testing, staging and production
 
 ## Notes
 
@@ -160,7 +200,7 @@ Blob Storage becomes the system of record for uploaded documents.
 
 ---
 
-# Azure07 - AI Document Verification
+# Azure08 - AI Document Verification
 
 ## Tasks
 
@@ -174,6 +214,7 @@ Blob Storage becomes the system of record for uploaded documents.
 - [ ] Add manual review workflow
 - [ ] Add verification history
 - [ ] Add verification audit trail
+- [ ] Configure AI resources for testing, staging and production
 
 ## Notes
 
@@ -181,51 +222,7 @@ Uploaded documents should be automatically analysed and verified where possible.
 
 ---
 
-# Azure08 - GitHub Actions Deployment
-
-## Tasks
-
-- [ ] Create build workflow
-- [ ] Create test workflow
-- [ ] Create deployment workflow
-- [ ] Create testing deployment workflow
-- [ ] Create production deployment workflow
-- [ ] Configure secrets management
-- [ ] Configure environment approvals
-- [ ] Configure deployment rollback strategy
-- [ ] Document deployment process
-
-## Notes
-
-All deployments should originate from GitHub Actions.
-
----
-
-# Azure09 - Environment Separation
-
-## Tasks
-
-- [ ] Create testing Azure environment
-- [ ] Create production Azure environment
-- [ ] Create separate SQL databases
-- [ ] Create separate Blob Storage accounts
-- [ ] Create separate Entra applications
-- [ ] Create separate AI resources
-- [ ] Create separate Key Vaults
-- [ ] Configure testing.all-checks-out.com
-- [ ] Configure production.all-checks-out.com
-- [ ] Alias www.all-checks-out.com to production
-
-## Decisions
-
-- Separate Azure subscriptions
-- Separate resource groups
-- Separate secrets
-- Separate databases
-
----
-
-# Azure10 - Domain Model Review
+# Azure09 - Domain Model Review
 
 ## Tasks
 
@@ -244,7 +241,7 @@ Do not split into microservices until core functionality is complete.
 
 ---
 
-# Azure11 - Microservices
+# Azure10 - Microservices
 
 ## Candidate Services
 
@@ -301,7 +298,7 @@ Do not split into microservices until core functionality is complete.
 
 ---
 
-# Azure12 - Microfrontends
+# Azure11 - Microfrontends
 
 ## Candidate Frontends
 
@@ -347,7 +344,7 @@ Microfrontends should follow service ownership boundaries.
 
 ---
 
-# Azure13 - Production Hardening
+# Azure12 - Production Hardening
 
 ## Tasks
 
@@ -374,7 +371,7 @@ Do not finalise service boundaries until:
 - Azure SQL exists
 - Blob Storage exists
 - AI verification exists
-- Testing and production environments exist
+- Testing, staging and production environments exist
 
 ## Microfrontends
 
