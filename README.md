@@ -717,6 +717,8 @@ pnpm run production:wait-for-deploy
 
 The release scripts fast-forward the target branch and push it to GitHub. The wait commands watch the matching GitHub Actions deployment until it succeeds or fails.
 
+The wait commands target the commit that was just promoted, so they do not accidentally report an older run from the same branch.
+
 GitHub Actions deploys only from:
 
 - `testing`

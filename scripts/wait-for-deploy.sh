@@ -25,16 +25,30 @@ if ! command -v gh >/dev/null 2>&1; then
   exit 1
 fi
 
+if ! command -v git >/dev/null 2>&1; then
+  echo "Missing required command: git"
+  exit 1
+fi
+
+if ! COMMIT_SHA="$(git rev-parse "$ENVIRONMENT_NAME" 2>/dev/null)"; then
+  echo "Could not find local branch: $ENVIRONMENT_NAME"
+  echo "Run pnpm run repo:init if the course branches are missing."
+  exit 1
+fi
+
 echo ""
-echo "Waiting for the latest GitHub Actions deployment on branch: $ENVIRONMENT_NAME"
+echo "Waiting for GitHub Actions deployment"
+echo "Branch: $ENVIRONMENT_NAME"
+echo "Commit: $COMMIT_SHA"
 echo ""
 
 RUN_ID=""
 
-for _ in {1..30}; do
+for _ in {1..60}; do
   RUN_ID="$(gh run list \
     --workflow deploy.yml \
     --branch "$ENVIRONMENT_NAME" \
+    --commit "$COMMIT_SHA" \
     --limit 1 \
     --json databaseId \
     --jq '.[0].databaseId // ""')"
@@ -47,7 +61,9 @@ for _ in {1..30}; do
 done
 
 if [[ -z "$RUN_ID" ]]; then
-  echo "No GitHub Actions run was found for branch: $ENVIRONMENT_NAME"
+  echo "No GitHub Actions run was found yet for:"
+  echo "Branch: $ENVIRONMENT_NAME"
+  echo "Commit: $COMMIT_SHA"
   echo "Check the Actions tab in GitHub, then retry this command."
   exit 1
 fi
