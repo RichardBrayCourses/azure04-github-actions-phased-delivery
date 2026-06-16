@@ -255,31 +255,24 @@ https://testing.all-checks-out.com
 
 ## Step 5: Connect Testing DNS In Cloudflare
 
-After testing deploys, the script prints an Azure URL like:
-
-```text
-https://<storage-account>.z33.web.core.windows.net/
-```
-
-Where to find that URL depends on how you deployed:
-
-| Deployment path | Where the Azure URL appears |
-| --- | --- |
-| `pnpm run deploy:testing` | In your terminal output. |
-| `pnpm run release:testing` | In the GitHub Actions run log and run summary. |
-
-You can also ask Azure for the testing URL from your terminal after deployment:
+After testing deploys, ask Azure for the exact Cloudflare target:
 
 ```bash
-DEPLOY_ENV=testing pnpm run ui:url
+pnpm run testing:get-storage-account
 ```
 
-Create or update this Cloudflare record:
+It prints one value, for example:
+
+```text
+allcheckouttest2lwwkfpxl.z33.web.core.windows.net
+```
+
+Create or update this Cloudflare record, using the exact value printed by the command as the target:
 
 ```text
 Type: CNAME
 Name: testing
-Target: <storage-account>.z33.web.core.windows.net
+Target: allcheckouttest2lwwkfpxl.z33.web.core.windows.net
 Proxy status: Proxied
 ```
 
@@ -327,12 +320,18 @@ Use this only when you deliberately want your terminal to deploy Azure staging d
 
 ## Step 7: Connect Staging DNS In Cloudflare
 
-After staging deploys, create or update:
+After staging deploys, ask Azure for the exact Cloudflare target:
+
+```bash
+pnpm run staging:get-storage-account
+```
+
+Create or update this Cloudflare record, using the exact value printed by the command as the target:
 
 ```text
 Type: CNAME
 Name: staging
-Target: the staging *.web.core.windows.net host
+Target: <the value printed by pnpm run staging:get-storage-account>
 Proxy status: Proxied
 ```
 
@@ -374,12 +373,18 @@ Use this only when you deliberately want your terminal to deploy Azure productio
 
 ## Step 9: Connect Production DNS In Cloudflare
 
-After production deploys, create or update:
+After production deploys, ask Azure for the exact Cloudflare target:
+
+```bash
+pnpm run production:get-storage-account
+```
+
+Create or update this Cloudflare record, using the exact value printed by the command as the target:
 
 ```text
 Type: CNAME
 Name: @
-Target: the production *.web.core.windows.net host
+Target: <the value printed by pnpm run production:get-storage-account>
 Proxy status: Proxied
 ```
 
