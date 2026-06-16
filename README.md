@@ -239,6 +239,12 @@ main -> testing
 
 It pushes the `testing` branch to GitHub. GitHub Actions then deploys the testing Azure environment.
 
+Wait for GitHub Actions to finish:
+
+```bash
+pnpm run testing:wait-for-deploy
+```
+
 Manual Azure path:
 
 ```bash
@@ -256,6 +262,8 @@ https://testing.all-checks-out.com
 ## Step 5: Connect Testing Domain
 
 ### Step 5a: Get The Testing Cloudflare Target
+
+Do this after `pnpm run testing:wait-for-deploy` has completed successfully.
 
 Run:
 
@@ -358,6 +366,12 @@ testing -> staging
 
 It pushes the `staging` branch to GitHub. GitHub Actions then deploys the staging Azure environment.
 
+Wait for GitHub Actions to finish:
+
+```bash
+pnpm run staging:wait-for-deploy
+```
+
 Staging URL:
 
 ```text
@@ -375,6 +389,8 @@ Use this only when you deliberately want your terminal to deploy Azure staging d
 ## Step 7: Connect Staging Domain
 
 ### Step 7a: Get The Staging Cloudflare Target
+
+Do this after `pnpm run staging:wait-for-deploy` has completed successfully.
 
 Run:
 
@@ -445,6 +461,12 @@ staging -> production
 
 It pushes the `production` branch to GitHub. GitHub Actions then deploys the production Azure environment.
 
+Wait for GitHub Actions to finish:
+
+```bash
+pnpm run production:wait-for-deploy
+```
+
 Production URL:
 
 ```text
@@ -462,6 +484,8 @@ Use this only when you deliberately want your terminal to deploy Azure productio
 ## Step 9: Connect Production Domain
 
 ### Step 9a: Get The Production Cloudflare Target
+
+Do this after `pnpm run production:wait-for-deploy` has completed successfully.
 
 Run:
 
@@ -524,8 +548,13 @@ After first-time setup, the repeated flow is:
 
 ```bash
 pnpm run release:testing
+pnpm run testing:wait-for-deploy
+
 pnpm run release:staging
+pnpm run staging:wait-for-deploy
+
 pnpm run release:production
+pnpm run production:wait-for-deploy
 ```
 
 Use them in order.
@@ -677,11 +706,16 @@ Each deployment creates or updates the resource group, deploys Bicep, enables st
 
 ```bash
 pnpm run release:testing
+pnpm run testing:wait-for-deploy
+
 pnpm run release:staging
+pnpm run staging:wait-for-deploy
+
 pnpm run release:production
+pnpm run production:wait-for-deploy
 ```
 
-The release scripts fast-forward the target branch and push it to GitHub.
+The release scripts fast-forward the target branch and push it to GitHub. The wait commands watch the matching GitHub Actions deployment until it succeeds or fails.
 
 GitHub Actions deploys only from:
 

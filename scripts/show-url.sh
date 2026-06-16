@@ -16,11 +16,23 @@ case "$OUTPUT_MODE" in
     ;;
 esac
 
-STORAGE_ACCOUNT_NAME=$(az deployment group show \
+if ! STORAGE_ACCOUNT_NAME=$(az deployment group show \
   --resource-group "$AZURE_RESOURCE_GROUP" \
   --name "$AZURE_DEPLOYMENT_NAME" \
   --query "properties.outputs.storageAccountName.value" \
-  --output tsv)
+  --output tsv 2>/dev/null); then
+  echo ""
+  echo "The $ENVIRONMENT_NAME Azure deployment is not available yet."
+  echo "Resource group: $AZURE_RESOURCE_GROUP"
+  echo ""
+  echo "If you just ran pnpm run release:$ENVIRONMENT_NAME, wait for GitHub Actions to finish:"
+  echo "pnpm run $ENVIRONMENT_NAME:wait-for-deploy"
+  echo ""
+  echo "Then retry:"
+  echo "pnpm run $ENVIRONMENT_NAME:get-storage-account"
+  echo ""
+  exit 1
+fi
 
 WEBSITE_URL=$(az storage account show \
   --resource-group "$AZURE_RESOURCE_GROUP" \
