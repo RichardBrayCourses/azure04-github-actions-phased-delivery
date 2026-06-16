@@ -102,7 +102,7 @@ Each environment has its own resource group, storage account, static website end
 | --- | --- | --- | --- | --- |
 | Testing | `testing` | `all-checks-out-testing-rg` | `https://testing.all-checks-out.com` | `environments/testing.json` |
 | Staging | `staging` | `all-checks-out-staging-rg` | `https://staging.all-checks-out.com` | `environments/staging.json` |
-| Production | `production` | `all-checks-out-production-rg` | `https://all-checks-out.com` | `environments/production.json` |
+| Production | `production` | `all-checks-out-production-rg` | `https://www.all-checks-out.com` | `environments/production.json` |
 
 ```mermaid
 flowchart TD
@@ -120,7 +120,7 @@ flowchart TD
 
   testingRg --> testingUrl[testing.all-checks-out.com]
   stagingRg --> stagingUrl[staging.all-checks-out.com]
-  productionRg --> productionUrl[all-checks-out.com]
+  productionRg --> productionUrl[www.all-checks-out.com]
 ```
 
 ## Local Deployment
@@ -218,7 +218,7 @@ After deploying each environment, run the matching deployment command and copy t
 | --- | --- | --- | --- | --- |
 | `testing.all-checks-out.com` | `CNAME` | Testing Azure static website host, for example `allcheckouttest...web.core.windows.net` | Proxied | Cloudflare SSL/TLS enabled |
 | `staging.all-checks-out.com` | `CNAME` | Staging Azure static website host, for example `allcheckoutstage...web.core.windows.net` | Proxied | Cloudflare SSL/TLS enabled |
-| `all-checks-out.com` | `CNAME` or Cloudflare CNAME flattening | Production Azure static website host, for example `allcheckoutprod...web.core.windows.net` | Proxied | Cloudflare SSL/TLS enabled |
+| `www.all-checks-out.com` | `CNAME` | Production Azure static website host, for example `allcheckoutprod...web.core.windows.net` | Proxied | Cloudflare SSL/TLS enabled |
 
 Recommended Cloudflare settings:
 
@@ -234,7 +234,7 @@ All public URLs must be HTTPS:
 ```text
 https://testing.all-checks-out.com
 https://staging.all-checks-out.com
-https://all-checks-out.com
+https://www.all-checks-out.com
 ```
 
 Azure Storage provides the static website origin endpoint. Cloudflare provides HTTPS for the custom domains when the records are proxied and SSL/TLS is enabled.

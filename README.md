@@ -8,7 +8,7 @@ This repository deploys the same static website into three separate Azure enviro
 | --- | --- | --- | --- |
 | Testing | `testing` | `all-checks-out-testing-rg` | `https://testing.all-checks-out.com` |
 | Staging | `staging` | `all-checks-out-staging-rg` | `https://staging.all-checks-out.com` |
-| Production | `production` | `all-checks-out-production-rg` | `https://all-checks-out.com` |
+| Production | `production` | `all-checks-out-production-rg` | `https://www.all-checks-out.com` |
 
 Development happens on `main`, but `main` does not deploy automatically.
 
@@ -118,7 +118,7 @@ changes Azure testing only. It does not change staging, production, GitHub, or C
 | Promote tested work into staging | Many times | `pnpm run release:staging` |
 | Configure staging custom domain | Once, then only if the Azure host changes | Add `staging` CNAME, then run `pnpm run staging:connect-domain` |
 | Promote approved work into production | Many times, carefully | `pnpm run release:production` |
-| Configure production custom domain | Once, then only if the Azure host changes | Add apex CNAME / CNAME flattening, then run `pnpm run production:connect-domain` |
+| Configure production custom domain | Once, then only if the Azure host changes | Add or update the `www` CNAME, then run `pnpm run production:connect-domain` |
 | Preview Azure infrastructure changes | Whenever useful | `pnpm run whatif:testing` |
 | Remove an Azure environment | Rarely | `pnpm run destroy:testing` |
 
@@ -470,7 +470,7 @@ pnpm run production:wait-for-deploy
 Production URL:
 
 ```text
-https://all-checks-out.com
+https://www.all-checks-out.com
 ```
 
 Manual production deployment:
@@ -482,6 +482,14 @@ pnpm run deploy:production
 Use this only when you deliberately want your terminal to deploy Azure production directly.
 
 ## Step 9: Connect Production Domain
+
+Production is configured to use:
+
+```text
+https://www.all-checks-out.com
+```
+
+The root/apex domain `all-checks-out.com` is not used by these production deployment commands. You can redirect it to `www` separately in Cloudflare later if you want.
 
 ### Step 9a: Get The Production Cloudflare Target
 
@@ -501,21 +509,21 @@ Create or update this Cloudflare DNS record:
 
 ```text
 Type: CNAME
-Name: @
+Name: www
 Target: <the value printed by pnpm run production:get-storage-account>
 Proxy status: DNS only
 ```
 
 Keep it as **DNS only** for now.
 
-Cloudflare may show this as CNAME flattening for the apex domain.
+If a `www` CNAME already exists from yesterday's deployment, edit that existing record instead of creating a second `www` record. Replace its target with the value printed by `pnpm run production:get-storage-account`.
 
 ### Step 9c: Wait Until Public DNS Shows The CNAME
 
 Run:
 
 ```bash
-dig +short CNAME all-checks-out.com
+dig +short CNAME www.all-checks-out.com
 ```
 
 Wait until it prints the same target value you copied in Step 9a.
@@ -539,7 +547,7 @@ Proxy status: Proxied
 ### Step 9f: Test The Production URL
 
 ```text
-https://all-checks-out.com
+https://www.all-checks-out.com
 ```
 
 ## Normal Day-To-Day Release Flow
@@ -766,7 +774,7 @@ Cloudflare remains the DNS provider.
 | --- | --- | --- | --- |
 | `testing.all-checks-out.com` | `CNAME` | testing Azure static website host | Proxied |
 | `staging.all-checks-out.com` | `CNAME` | staging Azure static website host | Proxied |
-| `all-checks-out.com` | `CNAME` or CNAME flattening | production Azure static website host | Proxied |
+| `www.all-checks-out.com` | `CNAME` | production Azure static website host | Proxied |
 
 Recommended Cloudflare settings:
 
