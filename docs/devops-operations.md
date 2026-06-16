@@ -2,7 +2,7 @@
 
 This repository uses simple branch promotion, Azure resource groups, Bicep, shell scripts, pnpm, and GitHub Actions.
 
-Run all commands from the `monorepo` directory.
+Run all commands from the repository root.
 
 ## Branch Strategy
 
@@ -34,7 +34,7 @@ Feature branches and `main` do not deploy automatically. GitHub Actions deploys 
 
 ## Repository Bootstrap
 
-When a course repository is copied into a new folder, initialise Git from inside `monorepo`:
+When a course repository is copied into a new folder, initialise Git from the repository root:
 
 ```bash
 pnpm run repo:init

@@ -1,113 +1,52 @@
-# Azure 03 - Deploy To A Registered Domain
+# Azure 04 - GitHub Actions Phased Delivery
 
 ## Overview
 
-This lesson deploys the same static website hosting pattern as Azure02, then points a registered domain at the Azure static website endpoint.
+This lesson turns the static website deployment into a simple phased delivery system.
 
-The Azure infrastructure is deliberately small:
+The repository supports three deployed environments:
 
-- one Azure resource group
-- one Azure Storage account
-- Blob static website hosting enabled on that storage account
-- the special `$web` container used by Azure static website hosting
+- Testing
+- Staging
+- Production
 
-The registered domain is managed in Cloudflare. The only manual DNS change used for this lesson is one proxied `www` CNAME record that points to the Azure static website endpoint.
-
-## How The Registered Domain Works
-
-There is no change to `monorepo/infra/main.bicep` for this lesson.
-
-Azure02 already creates the Azure infrastructure we need: a StorageV2 account with Blob static website hosting enabled. Azure gives that static website a public endpoint ending in `web.core.windows.net`.
-
-Azure03 keeps that Azure infrastructure the same. The registered domain is added by creating one Cloudflare DNS record:
+Development happens on `main`, but `main` does not deploy automatically. Releases are promoted through permanent branches:
 
 ```text
-www.all-checks-out.com CNAME azure02xxxxxxxxp4ruuk.z33.web.core.windows.net
+main
+  |
+  v
+testing
+  |
+  v
+staging
+  |
+  v
+production
 ```
 
-Because the record is proxied by Cloudflare, visitors use the registered domain:
+Each deployed environment has its own Azure resource group, storage account, static website endpoint, and Cloudflare DNS record.
+
+## Project Structure
 
 ```text
-https://www.all-checks-out.com
-```
-
-Cloudflare then forwards the request to the Azure static website endpoint.
-
-## Deployment Steps
-
-Open a terminal in the **monorepo** folder and run commands.
-
-Install dependencies:
-
-```bash
-pnpm install
-```
-
-Deploy the Azure infrastructure, build the website, upload it, and print the Azure static website endpoint:
-
-```bash
-pnpm run deploy-everything
-```
-
-The final command prints a URL like this:
-
-```text
-https://azure02xxxxxxxxp4ruuk.z33.web.core.windows.net/
-```
-
-Use that Azure endpoint as the target for the Cloudflare `www` CNAME record.
-
-In Cloudflare DNS, add one CNAME record:
-
-```text
-Type: CNAME
-Name: www
-Target: azure02xxxxxxxxp4ruuk.z33.web.core.windows.net
-Proxy status: Proxied
-```
-
-For this deployment, the DNS record is:
-
-```text
-www.all-checks-out.com.  1  IN  CNAME  azure02xxxxxxxxp4ruuk.z33.web.core.windows.net. ; cf_tags=cf-proxied:true
-```
-
-After Cloudflare has saved the record, visit:
-
-```text
-https://www.all-checks-out.com
-```
-
-## Architecture
-
-```mermaid
-flowchart LR
-  developer[Developer terminal]
-  build[Local website build output<br/>apps/ui/dist]
-  bicep[Bicep template<br/>monorepo/infra/main.bicep]
-  scripts[Azure CLI scripts<br/>monorepo/scripts]
-  cloudflare[Cloudflare DNS<br/>www CNAME]
-
-  subgraph Azure
-    rg[Resource group]
-    storage[Storage account<br/>StorageV2 / Standard_LRS]
-    web[Static website hosting<br/>$web container]
-    endpoint[Azure static website endpoint<br/>*.web.core.windows.net]
-  end
-
-  browser[Browser<br/>www.all-checks-out.com]
-
-  developer --> bicep
-  developer --> scripts
-  developer --> build
-  bicep --> rg
-  rg --> storage
-  scripts --> web
-  build --> web
-  storage --> endpoint
-  web --> endpoint
-  cloudflare --> endpoint
-  browser --> cloudflare
+.
+├── .github
+│   └── workflows
+│       └── deploy.yml
+├── apps
+│   └── ui
+├── docs
+├── environments
+│   ├── production.json
+│   ├── staging.json
+│   └── testing.json
+├── infra
+│   └── main.bicep
+├── scripts
+├── package.json
+├── pnpm-lock.yaml
+└── pnpm-workspace.yaml
 ```
 
 ## Prerequisites
@@ -118,8 +57,15 @@ You need:
 - pnpm
 - Azure CLI
 - an Azure subscription
-- a signed-in Azure CLI session
+- a signed-in Azure CLI session for local deployments
 - a registered domain managed in Cloudflare
+- a GitHub repository with an `AZURE_CREDENTIALS` secret for GitHub Actions
+
+Install dependencies:
+
+```bash
+pnpm install
+```
 
 Check your Azure CLI account:
 
@@ -133,90 +79,159 @@ Sign in if needed:
 az login
 ```
 
-Select a subscription if your account has access to more than one:
+## Environment Configuration
 
-```bash
-az account set --subscription "<subscription-id-or-name>"
-```
-
-## Configuration
-
-The scripts use these defaults from `monorepo/scripts/config.sh`:
-
-```bash
-AZURE_LOCATION="${AZURE_LOCATION:-uksouth}"
-AZURE_RESOURCE_GROUP="${AZURE_RESOURCE_GROUP:-azure02-static-website-rg}"
-AZURE_DEPLOYMENT_NAME="${AZURE_DEPLOYMENT_NAME:-azure02-static-website}"
-AZURE_APP_NAME="${AZURE_APP_NAME:-azure02web}"
-AZURE_STORAGE_AUTH_MODE="${AZURE_STORAGE_AUTH_MODE:-key}"
-UI_DIST_DIR="${UI_DIST_DIR:-apps/ui/dist}"
-```
-
-Override values inline when needed:
-
-```bash
-AZURE_LOCATION=westeurope AZURE_RESOURCE_GROUP=my-static-site-rg pnpm run deploy-everything
-```
-
-## Infrastructure
-
-`monorepo/infra/main.bicep` is intentionally unchanged from Azure02.
-
-That is the main infrastructure lesson in this repository: the Azure resources do not need to change just because the site is reached through a registered domain. The Azure Storage account still serves the website from its static website endpoint.
-
-The registered-domain infrastructure is the Cloudflare DNS record. It is added manually in Cloudflare:
+Environment settings live in:
 
 ```text
-www.all-checks-out.com.  1  IN  CNAME  azure02xxxxxxxxp4ruuk.z33.web.core.windows.net. ; cf_tags=cf-proxied:true
+environments/testing.json
+environments/staging.json
+environments/production.json
 ```
 
-This maps `www.all-checks-out.com` to the Azure static website endpoint while Cloudflare proxies the request.
+| Environment | Branch | Resource group | Public URL |
+| --- | --- | --- | --- |
+| Testing | `testing` | `all-checks-out-testing-rg` | `https://testing.all-checks-out.com` |
+| Staging | `staging` | `all-checks-out-staging-rg` | `https://staging.all-checks-out.com` |
+| Production | `production` | `all-checks-out-production-rg` | `https://all-checks-out.com` |
 
-## Scripts
+## Local Deployment
 
-- `infra:deploy` creates the resource group, deploys Bicep, reads the storage account name, and enables Blob static website hosting.
-- `infra:what-if` previews the Bicep deployment.
-- `ui:build` builds the website into `apps/ui/dist`.
-- `ui:upload` uploads `apps/ui/dist` into the `$web` container.
-- `ui:url` prints the storage account's `primaryEndpoints.web` URL.
-- `deploy-website` builds and uploads the website.
-- `deploy-everything` deploys infrastructure, builds the website, uploads it, and prints the Azure static website endpoint.
-- `infra:destroy` deletes the resource group.
+Deploy testing:
 
-## Project Structure
+```bash
+pnpm run deploy:testing
+```
+
+Deploy staging:
+
+```bash
+pnpm run deploy:staging
+```
+
+Deploy production:
+
+```bash
+pnpm run deploy:production
+```
+
+Each deployment creates or updates the resource group, deploys Bicep, enables static website hosting, builds the UI, uploads the UI, and prints the deployed URLs.
+
+## What-If
+
+Preview infrastructure changes:
+
+```bash
+pnpm run whatif:testing
+pnpm run whatif:staging
+pnpm run whatif:production
+```
+
+## Release Commands
+
+Promote `main` to `testing`:
+
+```bash
+pnpm run release:testing
+```
+
+Promote `testing` to `staging`:
+
+```bash
+pnpm run release:staging
+```
+
+Promote `staging` to `production`:
+
+```bash
+pnpm run release:production
+```
+
+The release scripts fast-forward the target branch and push it to GitHub. GitHub Actions deploys only from `testing`, `staging`, and `production`.
+
+## GitHub Actions
+
+The workflow is defined in:
 
 ```text
-.
-├── README.md
-└── monorepo
-    ├── apps
-    │   └── ui
-    ├── infra
-    │   └── main.bicep
-    ├── scripts
-    │   ├── config.sh
-    │   ├── deploy-infra.sh
-    │   ├── destroy-infra.sh
-    │   ├── show-url.sh
-    │   ├── upload-ui.sh
-    │   └── what-if-infra.sh
-    ├── package.json
-    ├── pnpm-lock.yaml
-    └── pnpm-workspace.yaml
+.github/workflows/deploy.yml
 ```
 
-## Troubleshooting
+It runs on pushes to:
 
-If upload fails because the build output is missing, run:
+- `testing`
+- `staging`
+- `production`
+
+It does not run on `main`.
+
+The workflow logs in to Azure, deploys infrastructure, builds the UI, uploads the UI, enables static website hosting, and prints the environment URL.
+
+## Repository Bootstrap
+
+When this course repository is copied into a new folder, initialise it with:
 
 ```bash
-pnpm run ui:build
+pnpm run repo:init
 ```
 
-If `ui:url` cannot find a URL, deploy the infrastructure first:
+This fails if `.git` already exists. Otherwise it creates:
+
+```text
+main
+testing
+staging
+production
+```
+
+To add a GitHub remote and push all branches:
 
 ```bash
-pnpm run infra:deploy
+pnpm run repo:init <github-url>
 ```
 
-If the registered domain does not load immediately, wait for the Cloudflare DNS change to propagate and then try `https://www.all-checks-out.com` again.
+## Destroy
+
+Destroy testing:
+
+```bash
+pnpm run destroy:testing
+```
+
+Destroy staging:
+
+```bash
+pnpm run destroy:staging
+```
+
+Destroy production:
+
+```bash
+pnpm run destroy:production
+```
+
+Production deletion requires this exact confirmation:
+
+```text
+DELETE-PRODUCTION
+```
+
+## DNS And HTTPS
+
+Cloudflare remains the DNS provider.
+
+After each environment is deployed, copy the printed Azure static website host and create a proxied Cloudflare DNS record:
+
+| Record | Type | Target | Proxy status |
+| --- | --- | --- | --- |
+| `testing.all-checks-out.com` | `CNAME` | testing Azure static website host | Proxied |
+| `staging.all-checks-out.com` | `CNAME` | staging Azure static website host | Proxied |
+| `all-checks-out.com` | `CNAME` or CNAME flattening | production Azure static website host | Proxied |
+
+Recommended Cloudflare settings:
+
+- SSL/TLS encryption mode: `Full`
+- Always Use HTTPS: enabled
+- Automatic HTTPS Rewrites: enabled
+
+More detail is in [docs/devops-operations.md](docs/devops-operations.md).

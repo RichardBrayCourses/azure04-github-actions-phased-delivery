@@ -1,5 +1,0 @@
-node_modules/
-dist/
-infra/main.json
-*.log
-.DS_Store

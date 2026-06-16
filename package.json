@@ -1,5 +1,5 @@
 {
-  "name": "azure-static-website-monorepo",
+  "name": "azure04-github-actions-phased-delivery",
   "private": true,
   "version": "1.0.0",
   "scripts": {

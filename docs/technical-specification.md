@@ -52,30 +52,29 @@ It is based on:
 +-- package.json
 +-- README.md
 +-- docs
-+-- monorepo
-    +-- apps
-    |   +-- ui
-    |       +-- src
-    |       +-- index.html
-    |       +-- package.json
-    |       +-- vite.config.ts
-    |       +-- tsconfig.json
-    +-- infra
-    |   +-- main.bicep
-    +-- scripts
-    |   +-- config.sh
-    |   +-- deploy-infra.sh
-    |   +-- destroy-infra.sh
-    |   +-- show-url.sh
-    |   +-- upload-ui.sh
-    |   +-- what-if-infra.sh
-    +-- package.json
-    +-- pnpm-workspace.yaml
++-- apps
+|   +-- ui
+|       +-- src
+|       +-- index.html
+|       +-- package.json
+|       +-- vite.config.ts
+|       +-- tsconfig.json
++-- environments
++-- infra
+|   +-- main.bicep
++-- scripts
+|   +-- config.sh
+|   +-- deploy-infra.sh
+|   +-- destroy-infra.sh
+|   +-- show-url.sh
+|   +-- upload-ui.sh
+|   +-- what-if-infra.sh
++-- pnpm-workspace.yaml
 ```
 
 ## Frontend Implementation
 
-- App location: `monorepo/apps/ui`
+- App location: `apps/ui`
 - Framework:
   - React 19
   - TypeScript 5.9
@@ -113,7 +112,7 @@ It is based on:
 
 ## Current Domain Runtime
 
-- Source of truth: `monorepo/apps/ui/src/data/console.ts`
+- Source of truth: `apps/ui/src/data/console.ts`
 - Storage: in-memory TypeScript entities and DTOs
 - Refresh model:
   - Mutations run through `InMemoryAllChecksOutDatabase`.
@@ -205,7 +204,7 @@ It is based on:
 
 ## Azure Infrastructure
 
-- Template: `monorepo/infra/main.bicep`
+- Template: `infra/main.bicep`
 - Provisioned resource:
   - Azure Storage account
 - Storage settings:
@@ -222,7 +221,7 @@ It is based on:
 
 ## Automation
 
-- Root scripts delegate into `monorepo`.
+- Repository scripts run from the project root.
 - Main scripts:
   - `pnpm run ui:dev`
   - `pnpm run ui:build`
