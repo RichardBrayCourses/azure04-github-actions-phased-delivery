@@ -18,6 +18,8 @@ obj/
 
 # Local environment files
 .env
+my-secret*.json
+azure-credentials*.json
 
 # OS files
 .DS_Store

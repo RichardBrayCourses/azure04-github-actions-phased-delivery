@@ -32,3 +32,15 @@ echo ""
 echo "Public environment URL:"
 echo "https://$AZURE_DOMAIN_NAME"
 echo ""
+
+if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+  {
+    echo "## Deployed $ENVIRONMENT_NAME"
+    echo ""
+    echo "| URL type | URL |"
+    echo "| --- | --- |"
+    echo "| Azure static website | $WEBSITE_URL |"
+    echo "| Public environment | https://$AZURE_DOMAIN_NAME |"
+    echo ""
+  } >> "$GITHUB_STEP_SUMMARY"
+fi

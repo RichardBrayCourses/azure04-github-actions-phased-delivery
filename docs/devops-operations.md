@@ -180,7 +180,7 @@ The workflow requires one GitHub Actions secret:
 AZURE_CREDENTIALS
 ```
 
-Create it from an Azure service principal JSON value compatible with `azure/login@v2`.
+Create it from an Azure service principal JSON value compatible with `azure/login@v3`.
 
 ## Destroy Process
 

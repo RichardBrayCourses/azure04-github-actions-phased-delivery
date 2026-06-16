@@ -112,7 +112,7 @@ changes Azure testing only. It does not change staging, production, GitHub, or C
 | --- | --- | --- |
 | Install dependencies on your machine | Once per machine, then again when dependencies change | `pnpm install` |
 | Initialise, repair, or publish course branches | Once per copied repo, or whenever one of the four local or remote branches is missing | `pnpm run repo:init` |
-| Configure GitHub Actions Azure credentials | Once per GitHub repo | Add `AZURE_CREDENTIALS` in GitHub |
+| Configure GitHub Actions access to Azure | Once per GitHub repo, then again only if you need to replace the credential | `pnpm run setup:github-azure` |
 | Deploy testing for the first time | Once initially, then as needed | `pnpm run release:testing` or `pnpm run deploy:testing` |
 | Configure Cloudflare DNS for testing | Once, then only if the Azure host changes | Add `testing` CNAME |
 | Promote tested work into staging | Many times | `pnpm run release:staging` |
@@ -178,90 +178,37 @@ If `origin` is configured, the script also pushes all four branches. Existing pu
 
 GitHub Actions needs permission to deploy into Azure.
 
-This repository's workflow expects one GitHub secret named:
-
-```text
-AZURE_CREDENTIALS
-```
-
-The value is Azure service principal JSON compatible with `azure/login@v2`.
-
-The example below stores the JSON in a temporary local file called `my-secret.json`. You can use a different filename if you prefer.
-
-The GitHub secret must be named `AZURE_CREDENTIALS` because `.github/workflows/deploy.yml` reads `secrets.AZURE_CREDENTIALS`. If you choose a different GitHub secret name, update the workflow as well.
-
-1. Sign in to GitHub CLI:
+Make sure you are signed in to both CLIs:
 
 ```bash
 gh auth login
-```
-
-2. Sign in to Azure CLI:
-
-```bash
 az login
 ```
 
-3. Check the Azure subscription that will receive the deployments:
+Then run:
 
 ```bash
-az account show --output table
+pnpm run setup:github-azure
 ```
 
-4. Create the Azure service principal JSON.
+This command:
 
-This command creates a service principal with Contributor access to the current subscription and writes the credentials to `my-secret.json`:
+1. Finds existing app registrations and service principals whose names start with `all-checks-out-github-actions`.
+2. Shows them to you.
+3. If any matching identities exist, asks before deleting them.
+4. Creates a fresh timestamped service principal.
+5. Updates the GitHub `AZURE_CREDENTIALS` secret.
+6. Deletes the temporary local secret file.
 
-```bash
-az ad sp create-for-rbac \
-  --name "all-checks-out-github-actions" \
-  --role contributor \
-  --scopes "/subscriptions/$(az account show --query id --output tsv)" \
-  --sdk-auth \
-  > my-secret.json
-```
+On a clean first setup, there is usually nothing to delete, so the script should not ask for confirmation.
 
-On Windows PowerShell, use:
-
-```powershell
-$subscriptionId = az account show --query id --output tsv
-az ad sp create-for-rbac `
-  --name "all-checks-out-github-actions" `
-  --role contributor `
-  --scopes "/subscriptions/$subscriptionId" `
-  --sdk-auth `
-  | Out-File -Encoding utf8 my-secret.json
-```
-
-5. Add the JSON to GitHub as the `AZURE_CREDENTIALS` secret:
-
-```bash
-gh secret set AZURE_CREDENTIALS < my-secret.json
-```
-
-6. Check that the secret exists:
+Check that GitHub has the secret:
 
 ```bash
 gh secret list
 ```
 
-7. Delete the local temporary secret file:
-
-```bash
-rm my-secret.json
-```
-
-On Windows PowerShell, the same GitHub secret command is:
-
-```powershell
-Get-Content my-secret.json | gh secret set AZURE_CREDENTIALS
-```
-
-Then delete the local temporary secret file:
-
-```powershell
-Remove-Item my-secret.json
-```
+The workflow expects the secret to be named `AZURE_CREDENTIALS`. The setup script uses that name.
 
 Make sure these branches exist on GitHub. You can create or repair them with `pnpm run repo:init` if `origin` is configured:
 
@@ -312,6 +259,19 @@ After testing deploys, the script prints an Azure URL like:
 
 ```text
 https://<storage-account>.z33.web.core.windows.net/
+```
+
+Where to find that URL depends on how you deployed:
+
+| Deployment path | Where the Azure URL appears |
+| --- | --- |
+| `pnpm run deploy:testing` | In your terminal output. |
+| `pnpm run release:testing` | In the GitHub Actions run log and run summary. |
+
+You can also ask Azure for the testing URL from your terminal after deployment:
+
+```bash
+DEPLOY_ENV=testing pnpm run ui:url
 ```
 
 Create or update this Cloudflare record:
@@ -620,13 +580,20 @@ It runs on pushes to:
 
 The workflow logs in to Azure, deploys infrastructure, builds the UI, uploads the UI, enables static website hosting, and prints the environment URL.
 
+The workflow uses current major versions of the standard setup actions:
+
+- `actions/checkout@v5`
+- `pnpm/action-setup@v6`
+- `actions/setup-node@v5`
+- `azure/login@v3`
+
 The workflow sets:
 
 ```yaml
 FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 ```
 
-This opts GitHub's JavaScript actions into Node.js 24. It avoids the GitHub Actions warning about Node.js 20 actions being deprecated. This is separate from the Node.js version used to build the app.
+This opts GitHub's JavaScript actions into Node.js 24. This is separate from the Node.js version used to build the app.
 
 ## Reference: DNS And HTTPS
 
