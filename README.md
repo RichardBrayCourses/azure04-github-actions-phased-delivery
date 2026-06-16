@@ -112,7 +112,7 @@ changes Azure testing only. It does not change staging, production, GitHub, or C
 | --- | --- | --- |
 | Install dependencies on your machine | Once per machine, then again when dependencies change | `pnpm install` |
 | Initialise, repair, or publish course branches | Once per copied repo, or whenever one of the four local or remote branches is missing | `pnpm run repo:init` |
-| Configure GitHub Actions access to Azure | Once per GitHub repo, then again only if you need to replace the credential | `pnpm run setup:github-azure` |
+| Configure GitHub Actions access to Azure | Once per GitHub repo, then again only if you need to replace the credential | `REPO_PREFIX_CODE=azure04 APP_PREFIX="all-checks-out-$REPO_PREFIX_CODE-github-actions" pnpm run setup:github-azure` |
 | Deploy testing for the first time | Once initially, then as needed | `pnpm run release:testing` or `pnpm run deploy:testing` |
 | Configure testing custom domain | Once, then only if the Azure host changes | Add `testing` CNAME, then run `pnpm run testing:connect-domain` |
 | Promote tested work into staging | Many times | `pnpm run release:staging` |
@@ -185,22 +185,35 @@ gh auth login
 az login
 ```
 
-Then run:
+Then run, using this repository's short prefix code:
 
 ```bash
-pnpm run setup:github-azure
+REPO_PREFIX_CODE=azure04
+APP_PREFIX="all-checks-out-$REPO_PREFIX_CODE-github-actions" pnpm run setup:github-azure
 ```
+
+Each course repository must be able to deploy independently, so always use a repo-specific service-principal prefix.
+
+Set `REPO_PREFIX_CODE` to the short course repo code, for example:
+
+```text
+azure04
+azure05
+azure06
+```
+
+When these docs are copied into the next repo, update the example value. For example, Azure05 should use `REPO_PREFIX_CODE=azure05`.
 
 This command:
 
-1. Finds existing app registrations and service principals whose names start with `all-checks-out-github-actions`.
+1. Finds existing app registrations and service principals whose names start with `APP_PREFIX`.
 2. Shows them to you.
 3. If any matching identities exist, asks before deleting them.
 4. Creates a fresh timestamped service principal.
 5. Updates the GitHub `AZURE_CREDENTIALS` secret.
 6. Deletes the temporary local secret file.
 
-On a clean first setup, there is usually nothing to delete, so the script should not ask for confirmation.
+The setup script finds and replaces only Azure identities whose names start with `APP_PREFIX`. A repo-specific prefix prevents this repo from deleting or replacing another course repo's GitHub Actions credential.
 
 Check that GitHub has the secret:
 
@@ -676,7 +689,7 @@ You need:
 - an Azure subscription
 - a signed-in Azure CLI session for local deployments
 - a registered domain managed in Cloudflare
-- a GitHub repository with an `AZURE_CREDENTIALS` secret for GitHub Actions
+- a GitHub repository with an `AZURE_CREDENTIALS` secret for GitHub Actions, created with a repo-specific `APP_PREFIX`
 
 Check your Azure CLI account:
 

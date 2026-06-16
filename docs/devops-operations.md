@@ -180,7 +180,26 @@ The workflow requires one GitHub Actions secret:
 AZURE_CREDENTIALS
 ```
 
-Create it from an Azure service principal JSON value compatible with `azure/login@v3`.
+Create it with the setup script, using this repository's short prefix code:
+
+```bash
+REPO_PREFIX_CODE=azure04
+APP_PREFIX="all-checks-out-$REPO_PREFIX_CODE-github-actions" pnpm run setup:github-azure
+```
+
+Each course repository must be able to deploy independently, so always use a repo-specific service-principal prefix.
+
+Set `REPO_PREFIX_CODE` to the short course repo code, for example:
+
+```text
+azure04
+azure05
+azure06
+```
+
+When these docs are copied into the next repo, update the example value. For example, Azure05 should use `REPO_PREFIX_CODE=azure05`.
+
+The setup script finds and replaces only Azure identities whose names start with `APP_PREFIX`. A repo-specific prefix prevents this repo from deleting or replacing another course repo's GitHub Actions credential.
 
 ## Destroy Process
 
