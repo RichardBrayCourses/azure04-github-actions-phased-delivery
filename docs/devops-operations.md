@@ -34,13 +34,13 @@ Feature branches and `main` do not deploy automatically. GitHub Actions deploys 
 
 ## Repository Bootstrap
 
-When a course repository is copied into a new folder, initialise Git from the repository root:
+When a course repository is copied into a new folder, initialise or repair the course branches from the repository root:
 
 ```bash
 pnpm run repo:init
 ```
 
-The command fails if the folder is already inside a Git repository. Otherwise it:
+If Git is not initialised yet, the command:
 
 1. Initialises Git.
 2. Creates the `main` branch.
@@ -48,6 +48,19 @@ The command fails if the folder is already inside a Git repository. Otherwise it
 4. Creates `testing`.
 5. Creates `staging`.
 6. Creates `production`.
+
+If Git already exists, the command checks for:
+
+```text
+main
+testing
+staging
+production
+```
+
+Existing branches are skipped. Missing branches are created from `main`.
+
+If `origin` is configured, the command pushes all four branches. Existing published branches are updated normally by Git. Missing published branches are created.
 
 To add a GitHub remote and push all four branches:
 

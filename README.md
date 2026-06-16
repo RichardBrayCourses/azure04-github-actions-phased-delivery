@@ -52,8 +52,8 @@ Read this before running commands.
 | `pnpm install` | Installs dependencies into `node_modules`. | No change. | No change. | No change. |
 | `pnpm run type-check` | Runs TypeScript checks. | No change. | No change. | No change. |
 | `pnpm run ui:build` | Builds `apps/ui/dist`. | No change. | No change. | No change. |
-| `pnpm run repo:init` | Creates local Git repo and branches. | No change. | No change unless a GitHub URL is passed. | No change. |
-| `pnpm run repo:init <github-url>` | Creates local Git repo and branches. | No change. | Adds `origin` and pushes branches. | No change. |
+| `pnpm run repo:init` | Creates a local Git repo if needed, then creates any missing course branches. Existing branches are skipped. | No change. | If `origin` exists, pushes all four branches idempotently. | No change. |
+| `pnpm run repo:init <github-url>` | Creates a local Git repo if needed, creates any missing course branches, and configures `origin`. | No change. | Adds or verifies `origin` and pushes all four branches idempotently. | No change. |
 | `pnpm run whatif:testing` | Runs Azure CLI. | Reads Azure and may create the testing resource group if missing. Does not upload the website. | No change. | No change. |
 | `pnpm run deploy:testing` | Builds the UI locally. | Creates or updates testing infrastructure and uploads the website. | No change. | No change. |
 | `pnpm run release:testing` | Runs Git commands locally. | Not directly. Azure changes later when GitHub Actions deploys. | Pushes `testing`, triggering GitHub Actions. | No change. |
@@ -81,7 +81,7 @@ changes Azure testing only. It does not change staging, production, GitHub, or C
 | Journey event | How often? | Main command or action |
 | --- | --- | --- |
 | Install dependencies on your machine | Once per machine, then again when dependencies change | `pnpm install` |
-| Initialise branches in a newly copied course repo | Once per copied repo, only if `.git` does not exist | `pnpm run repo:init` |
+| Initialise, repair, or publish course branches | Once per copied repo, or whenever one of the four local or remote branches is missing | `pnpm run repo:init` |
 | Configure GitHub Actions Azure credentials | Once per GitHub repo | Add `AZURE_CREDENTIALS` in GitHub |
 | Deploy testing for the first time | Once initially, then as needed | `pnpm run release:testing` or `pnpm run deploy:testing` |
 | Configure Cloudflare DNS for testing | Once, then only if the Azure host changes | Add `testing` CNAME |
@@ -115,11 +115,9 @@ pnpm run ui:build
 
 These also affect only your machine.
 
-## Step 2: Only If This Is A Newly Copied Course Repo
+## Step 2: Create Or Repair The Course Branches
 
-If the folder already has `.git`, skip this step.
-
-If this is a copied course folder with no `.git`, initialise Git:
+Run this if the repository is brand new, if one of the course branches is missing locally, or if one of the published GitHub branches is missing:
 
 ```bash
 pnpm run repo:init
@@ -140,7 +138,11 @@ staging
 production
 ```
 
-`repo:init` is a bootstrap command. Do not run it as part of normal deployment.
+If one or more local branches already exists, the script skips it and creates only the missing branches.
+
+If `origin` is configured, the script also pushes all four branches. Existing published branches are updated normally by Git. Missing published branches are created.
+
+`repo:init` is a bootstrap and repair command. Do not run it as part of normal deployment.
 
 ## Step 3: Set Up GitHub Actions Once
 
@@ -152,7 +154,7 @@ AZURE_CREDENTIALS
 
 The value must be Azure service principal JSON compatible with `azure/login@v2`.
 
-Make sure these branches exist on GitHub:
+Make sure these branches exist on GitHub. You can create or repair them with `pnpm run repo:init` if `origin` is configured:
 
 ```text
 main
