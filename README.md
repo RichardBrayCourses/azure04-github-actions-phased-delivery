@@ -43,6 +43,36 @@ Normal course flow uses `release:*`.
 
 Manual troubleshooting or first Azure smoke tests can use `deploy:*`.
 
+## Install The GitHub CLI
+
+The GitHub CLI is called `gh`. This README uses it to create GitHub secrets from the terminal.
+
+macOS with Homebrew:
+
+```bash
+brew install gh
+```
+
+Windows with WinGet:
+
+```powershell
+winget install --id GitHub.cli
+```
+
+After installing, sign in:
+
+```bash
+gh auth login
+```
+
+Check that `gh` can see the current repository:
+
+```bash
+gh repo view
+```
+
+Official install page: <https://cli.github.com/>
+
 ## What Changes Where?
 
 Read this before running commands.
@@ -146,13 +176,92 @@ If `origin` is configured, the script also pushes all four branches. Existing pu
 
 ## Step 3: Set Up GitHub Actions Once
 
-In GitHub, add a repository secret named:
+GitHub Actions needs permission to deploy into Azure.
+
+This repository's workflow expects one GitHub secret named:
 
 ```text
 AZURE_CREDENTIALS
 ```
 
-The value must be Azure service principal JSON compatible with `azure/login@v2`.
+The value is Azure service principal JSON compatible with `azure/login@v2`.
+
+The example below stores the JSON in a temporary local file called `my-secret.json`. You can use a different filename if you prefer.
+
+The GitHub secret must be named `AZURE_CREDENTIALS` because `.github/workflows/deploy.yml` reads `secrets.AZURE_CREDENTIALS`. If you choose a different GitHub secret name, update the workflow as well.
+
+1. Sign in to GitHub CLI:
+
+```bash
+gh auth login
+```
+
+2. Sign in to Azure CLI:
+
+```bash
+az login
+```
+
+3. Check the Azure subscription that will receive the deployments:
+
+```bash
+az account show --output table
+```
+
+4. Create the Azure service principal JSON.
+
+This command creates a service principal with Contributor access to the current subscription and writes the credentials to `my-secret.json`:
+
+```bash
+az ad sp create-for-rbac \
+  --name "all-checks-out-github-actions" \
+  --role contributor \
+  --scopes "/subscriptions/$(az account show --query id --output tsv)" \
+  --sdk-auth \
+  > my-secret.json
+```
+
+On Windows PowerShell, use:
+
+```powershell
+$subscriptionId = az account show --query id --output tsv
+az ad sp create-for-rbac `
+  --name "all-checks-out-github-actions" `
+  --role contributor `
+  --scopes "/subscriptions/$subscriptionId" `
+  --sdk-auth `
+  | Out-File -Encoding utf8 my-secret.json
+```
+
+5. Add the JSON to GitHub as the `AZURE_CREDENTIALS` secret:
+
+```bash
+gh secret set AZURE_CREDENTIALS < my-secret.json
+```
+
+6. Check that the secret exists:
+
+```bash
+gh secret list
+```
+
+7. Delete the local temporary secret file:
+
+```bash
+rm my-secret.json
+```
+
+On Windows PowerShell, the same GitHub secret command is:
+
+```powershell
+Get-Content my-secret.json | gh secret set AZURE_CREDENTIALS
+```
+
+Then delete the local temporary secret file:
+
+```powershell
+Remove-Item my-secret.json
+```
 
 Make sure these branches exist on GitHub. You can create or repair them with `pnpm run repo:init` if `origin` is configured:
 
@@ -164,6 +273,8 @@ production
 ```
 
 After this, pushes to `testing`, `staging`, and `production` can deploy through GitHub Actions.
+
+Microsoft's Azure Login documentation explains this service-principal secret pattern here: <https://learn.microsoft.com/en-us/azure/developer/github/connect-from-azure-secret>
 
 ## Step 4: Deploy Testing For The First Time
 
